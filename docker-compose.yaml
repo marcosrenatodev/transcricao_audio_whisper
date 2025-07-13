@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  whisper-api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: my-whisper-transcriber
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./backend:/app  # Bind mount para recarregamento automático
+    environment:
+      FLASK_APP: app.py
+      FLASK_ENV: development  # Ativa debug mode
+      WHISPER_MODEL: base
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    command: ["flask", "run", "--host=0.0.0.0", "--port=5000", "--reload"]
+
+  whisper-frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: my-whisper-frontend
+    ports:
+      - "8080:80"
+    volumes:
+      - ./frontend:/usr/share/nginx/html  # Bind mount para desenvolvimento
+    depends_on:
+      - whisper-api
