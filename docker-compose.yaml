@@ -2,17 +2,12 @@ version: '3.8'
 
 services:
   whisper-api:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: my-whisper-transcriber
-    ports:
-      - "5000:5000"
+    build: ./backend
     volumes:
-      - ./backend:/app  # Bind mount para recarregamento automático
+      - ./backend:/app
     environment:
       FLASK_APP: app.py
-      FLASK_ENV: development  # Ativa debug mode
+      FLASK_ENV: development
       WHISPER_MODEL: base
     deploy:
       resources:
@@ -22,15 +17,25 @@ services:
               count: all
               capabilities: [gpu]
     command: ["flask", "run", "--host=0.0.0.0", "--port=5000", "--reload"]
+    networks:
+      - whisper-net
 
   whisper-frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
+    image: nginx:alpine
     container_name: my-whisper-frontend
     ports:
-      - "8080:80"
+      - "${PORT:-80}:80"
     volumes:
-      - ./frontend:/usr/share/nginx/html  # Bind mount para desenvolvimento
+      - ./frontend:/usr/share/nginx/html
+      - ./frontend/nginx.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      - whisper-net
     depends_on:
       - whisper-api
+    # Adicione esta linha para forçar a exposição da porta
+    expose:
+      - "80"
+
+networks:
+  whisper-net:
+    driver: bridge
