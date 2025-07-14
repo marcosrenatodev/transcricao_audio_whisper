@@ -11,8 +11,8 @@ app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
 
 # CORS(app, origins=["http://localhost:5500", "http://127.0.0.1:5500"])
-CORS(app, origins=["http://frontend"])
-
+# Libere todas as origens para desenvolvimento
+CORS(app, resources={r"/*": {"origins": "*"}})
 # Configura os logs
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -58,9 +58,9 @@ def transcribe_audio():
         logger.error("Nome de arquivo vazio")
         return jsonify({"error": "Nome de arquivo vazio"}), 400
 
-    if not file.filename.lower().endswith(('.wav', '.mp3', '.ogg', '.flac', '.opus')):
+    if not file.filename.lower().endswith(('.wav', '.mp3', '.ogg', '.flac', '.opus', '.m4a')):
         logger.error(f"Formato não suportado: {file.filename}")
-        return jsonify({"error": "Formato não suportado. Use: .wav, .mp3, .ogg, .flac ou .opus"}), 400
+        return jsonify({"error": "Formato não suportado. Use: .wav, .mp3, .ogg, .flac, .opus ou .m4a"}), 400
 
     # Processamento do áudio
     original_filename = file.filename
