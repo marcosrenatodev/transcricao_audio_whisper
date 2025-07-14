@@ -1,39 +1,37 @@
-# Usa a imagem base da NVIDIA CUDA para suporte a GPU
 FROM nvidia/cuda:12.2.2-cudnn8-runtime-ubuntu20.04
 
-# Configurações básicas e instalação de dependências do sistema
-ENV DEBIAN_FRONTEND=noninteractive
-RUN apt update && apt install -y \
-    python3 python3-pip ffmpeg git curl && \
-    apt clean && \
-    rm -rf /var/lib/apt/lists/*
+ENV DEBIAN_FRONTEND=noninteractive \
+    PIP_DEFAULT_TIMEOUT=300 \
+    PIP_NO_CACHE_DIR=off \
+    TORCH_CUDA_ARCH_LIST="8.6"
 
-# Cria um usuário não-root e diretório de trabalho
-RUN useradd -m appuser && \
-    mkdir -p /app && \
-    chown appuser:appuser /app
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 python3-pip ffmpeg git curl \
+    && rm -rf /var/lib/apt/lists/*
 
-# Define o diretório de trabalho e ajusta permissões
+RUN useradd -m appuser && mkdir /app && chown appuser:appuser /app
 WORKDIR /app
 
-# Copia o arquivo de requisitos e instala as dependências Python
+# Instala dependências Python em etapas (cache-friendly)
 COPY --chown=appuser:appuser requirements.txt .
-RUN pip3 install --no-cache-dir -r requirements.txt && \
-    # Instala a versão fixa do Whisper (v20250625)
-    pip3 install --no-cache-dir git+https://github.com/openai/whisper.git@v20250625
 
-# Copia o aplicativo com permissões corretas
+# 1. Instala torch separadamente com índices otimizados
+RUN pip3 install --no-cache-dir -U pip && \
+    pip3 install --no-cache-dir torch==2.3.1 torchaudio==2.3.1 \
+    --index-url https://download.pytorch.org/whl/cu121
+
+# 2. Instala outras dependências
+RUN pip3 install --no-cache-dir -r requirements.txt
+
+# 3. Instala Whisper com fallback para timeout estendido
+RUN pip3 install --no-cache-dir --timeout 600 \
+    git+https://github.com/openai/whisper.git@v20250625
+
+# Copia aplicação e configura ambiente
 COPY --chown=appuser:appuser app.py .
+RUN mkdir -p /tmp/whisper_uploads && chown appuser /tmp/whisper_uploads
 
-# Cria diretório para uploads temporários (com permissões)
-RUN mkdir -p /tmp/whisper_uploads && \
-    chown appuser /tmp/whisper_uploads
-
-# Expõe a porta do Flask
+# Configurações finais
 EXPOSE 5000
-
-# Define o usuário não-root
 USER appuser
-
-# Comando para iniciar o servidor Flask em modo desenvolvimento
 CMD ["python3", "app.py"]
