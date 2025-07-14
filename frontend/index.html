@@ -172,11 +172,8 @@
 
             try {
                 // URL do seu serviço Dockerizado. Certifique-se de que ele esteja rodando na porta 5000.
-                const API_URL = window.location.hostname === 'localhost'
-                    ? 'http://whisper-api:5000'  // Acesso interno (dentro do Docker)
-                    : 'http://192.168.100.113:5000'; // Acesso externo (substitua pelo IP do seu PC)
 
-                const response = await fetch(`${API_URL}/transcribe`, {
+                const response = await fetch('/api/transcribe', {
                     method: 'POST',
                     body: formData
                 });
